@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Monitor - E-Ink</title>
+    <meta http-equiv="refresh" content="30">
+    <style>
+        /* ===== E-INK OPTIMIZED STYLES ===== */
+        /* No color, no gradients, no animations. High contrast black/white only. */
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Courier New", Courier, monospace;
+            font-size: 14px;
+            line-height: 1.4;
+            color: #000;
+            background: #fff;
+            padding: 8px;
+        }
+
+        h1 {
+            font-size: 20px;
+            text-align: center;
+            border-bottom: 3px solid #000;
+            padding-bottom: 4px;
+            margin-bottom: 8px;
+        }
+
+        .meta {
+            text-align: center;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+
+        /* ---------- Section cards ---------- */
+        .section {
+            border: 2px solid #000;
+            margin-bottom: 8px;
+            page-break-inside: avoid;
+        }
+
+        .section-title {
+            background: #000;
+            color: #fff;
+            font-size: 15px;
+            font-weight: bold;
+            padding: 3px 8px;
+        }
+
+        .section-body {
+            padding: 6px 8px;
+        }
+
+        /* ---------- Bar chart (pure CSS) ---------- */
+        .bar-row {
+            margin-bottom: 4px;
+        }
+
+        .bar-label {
+            display: inline-block;
+            width: 140px;
+            font-size: 13px;
+            vertical-align: middle;
+        }
+
+        .bar-container {
+            display: inline-block;
+            width: calc(100% - 210px);
+            height: 16px;
+            border: 1px solid #000;
+            vertical-align: middle;
+            background: #fff;
+        }
+
+        .bar-fill {
+            display: block;
+            height: 100%;
+            background: #000;
+        }
+
+        .bar-value {
+            display: inline-block;
+            width: 58px;
+            text-align: right;
+            font-size: 13px;
+            vertical-align: middle;
+        }
+
+        /* ---------- Key-value rows ---------- */
+        .kv {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dotted #999;
+            padding: 2px 0;
+            font-size: 13px;
+        }
+
+        .kv:last-child {
+            border-bottom: none;
+        }
+
+        .kv-key {
+            font-weight: bold;
+        }
+
+        /* ---------- Per-core mini bars ---------- */
+        .core-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2px 8px;
+            margin-top: 4px;
+        }
+
+        .core-item {
+            font-size: 11px;
+            width: 110px;
+        }
+
+        .core-bar {
+            display: inline-block;
+            height: 10px;
+            border: 1px solid #000;
+            width: 60px;
+            vertical-align: middle;
+        }
+
+        .core-fill {
+            display: block;
+            height: 100%;
+            background: #000;
+        }
+
+        /* ---------- Footer ---------- */
+        .footer {
+            text-align: center;
+            font-size: 11px;
+            margin-top: 8px;
+            border-top: 1px solid #000;
+            padding-top: 4px;
+        }
+
+        /* ---------- Disk / GPU table ---------- */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        th, td {
+            border: 1px solid #000;
+            padding: 2px 6px;
+            text-align: left;
+        }
+
+        th {
+            background: #ddd;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<h1>SYSTEM MONITOR</h1>
+
+<div class="meta">
+    {{ data.system.hostname }} &bull;
+    {{ data.system.os }} ({{ data.system.architecture }}) &bull;
+    {{ data.timestamp }}
+</div>
+
+<!-- ==================== SYSTEM ==================== -->
+<div class="section">
+    <div class="section-title">SYSTEM</div>
+    <div class="section-body">
+        <div class="kv"><span class="kv-key">Hostname</span><span>{{ data.system.hostname }}</span></div>
+        <div class="kv"><span class="kv-key">OS</span><span>{{ data.system.os }}</span></div>
+        <div class="kv"><span class="kv-key">Architecture</span><span>{{ data.system.architecture }}</span></div>
+        <div class="kv"><span class="kv-key">Boot Time</span><span>{{ data.system.boot_time }}</span></div>
+        <div class="kv"><span class="kv-key">Uptime</span><span>{{ data.system.uptime }}</span></div>
+    </div>
+</div>
+
+<!-- ==================== CPU ==================== -->
+<div class="section">
+    <div class="section-title">CPU</div>
+    <div class="section-body">
+        <!-- Overall usage bar -->
+        <div class="bar-row">
+            <span class="bar-label">Overall Usage</span>
+            <span class="bar-container"><span class="bar-fill" style="width:{{ data.cpu.usage_percent }}%"></span></span>
+            <span class="bar-value">{{ data.cpu.usage_percent }}%</span>
+        </div>
+
+        <div class="kv"><span class="kv-key">Cores</span><span>{{ data.cpu.cores_physical }} physical / {{ data.cpu.cores_logical }} logical</span></div>
+        {% if data.cpu.freq_current_mhz %}
+        <div class="kv"><span class="kv-key">Frequency</span><span>{{ data.cpu.freq_current_mhz }} MHz{% if data.cpu.freq_max_mhz %} (max {{ data.cpu.freq_max_mhz }} MHz){% endif %}</span></div>
+        {% endif %}
+
+        <!-- Per-core mini bars -->
+        <div class="core-grid">
+            {% for pct in data.cpu.per_core_percent %}
+            <div class="core-item">
+                C{{ loop.index0 }}:
+                <span class="core-bar"><span class="core-fill" style="width:{{ pct }}%"></span></span>
+                {{ pct }}%
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- ==================== MEMORY ==================== -->
+<div class="section">
+    <div class="section-title">MEMORY</div>
+    <div class="section-body">
+        <div class="bar-row">
+            <span class="bar-label">RAM {{ data.memory.ram_used_gb }}/{{ data.memory.ram_total_gb }} GB</span>
+            <span class="bar-container"><span class="bar-fill" style="width:{{ data.memory.ram_percent }}%"></span></span>
+            <span class="bar-value">{{ data.memory.ram_percent }}%</span>
+        </div>
+        {% if data.memory.swap_total_gb > 0 %}
+        <div class="bar-row">
+            <span class="bar-label">Swap {{ data.memory.swap_used_gb }}/{{ data.memory.swap_total_gb }} GB</span>
+            <span class="bar-container"><span class="bar-fill" style="width:{{ data.memory.swap_percent }}%"></span></span>
+            <span class="bar-value">{{ data.memory.swap_percent }}%</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ==================== GPU ==================== -->
+{% if data.gpus %}
+<div class="section">
+    <div class="section-title">GPU</div>
+    <div class="section-body">
+        {% for gpu in data.gpus %}
+        <div style="{% if not loop.first %}margin-top:6px; border-top:1px solid #000; padding-top:4px;{% endif %}">
+            <div class="kv"><span class="kv-key">{{ gpu.name }}</span><span>GPU #{{ gpu.id }}</span></div>
+            <div class="bar-row">
+                <span class="bar-label">Load</span>
+                <span class="bar-container"><span class="bar-fill" style="width:{{ gpu.load_percent }}%"></span></span>
+                <span class="bar-value">{{ gpu.load_percent }}%</span>
+            </div>
+            <div class="bar-row">
+                <span class="bar-label">VRAM {{ gpu.memory_used_mb }}/{{ gpu.memory_total_mb }} MB</span>
+                <span class="bar-container"><span class="bar-fill" style="width:{{ gpu.memory_percent }}%"></span></span>
+                <span class="bar-value">{{ gpu.memory_percent }}%</span>
+            </div>
+            {% if gpu.temperature_c %}
+            <div class="kv"><span class="kv-key">Temperature</span><span>{{ gpu.temperature_c }} &deg;C</span></div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<div class="section">
+    <div class="section-title">GPU</div>
+    <div class="section-body">
+        <em>No NVIDIA GPU detected (GPUtil required)</em>
+    </div>
+</div>
+{% endif %}
+
+<!-- ==================== DISKS ==================== -->
+<div class="section">
+    <div class="section-title">DISKS</div>
+    <div class="section-body">
+        <table>
+            <tr>
+                <th>Device</th>
+                <th>Mount</th>
+                <th>Type</th>
+                <th>Used / Total</th>
+                <th>Usage</th>
+            </tr>
+            {% for d in data.disks %}
+            <tr>
+                <td>{{ d.device }}</td>
+                <td>{{ d.mountpoint }}</td>
+                <td>{{ d.fstype }}</td>
+                <td>{{ d.used_gb }} / {{ d.total_gb }} GB</td>
+                <td>
+                    <span class="core-bar" style="width:80px"><span class="core-fill" style="width:{{ d.percent }}%"></span></span>
+                    {{ d.percent }}%
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+<!-- ==================== NETWORK ==================== -->
+<div class="section">
+    <div class="section-title">NETWORK</div>
+    <div class="section-body">
+        <div class="kv"><span class="kv-key">Total Sent</span><span>{{ data.network.bytes_sent_mb }} MB</span></div>
+        <div class="kv"><span class="kv-key">Total Received</span><span>{{ data.network.bytes_recv_mb }} MB</span></div>
+    </div>
+</div>
+
+<div class="footer">
+    Auto-refresh every 30 seconds &bull; {{ data.timestamp }}
+</div>
+
+</body>
+</html>
