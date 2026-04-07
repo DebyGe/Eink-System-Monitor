@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    {% if rotate %}
+    <meta name="viewport" content="width=device-height, initial-scale=1.0">
+    {% else %}
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% endif %}
     <title>System Monitor - E-Ink</title>
     <meta http-equiv="refresh" content="30">
     <style>
@@ -17,7 +21,13 @@
 
         {% if rotate %}
         /* ---------- Rotated display (90° CW, portrait → landscape) ---------- */
-        html, body {
+        html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
             margin: 0;
             padding: 0;
             width: 100%;
@@ -26,20 +36,12 @@
         }
 
         #page {
-            transform: rotate(90deg);
-            transform-origin: top left;
-            position: absolute;
-            top: 0;
-            left: 0;
-            /* width/height swapped and repositioned by inline script */
+            transform-origin: 0 0;
+            transform: rotate(90deg) translateY(-100%);
+            width: 100vh;
+            height: 100vw;
             overflow-y: auto;
             overflow-x: hidden;
-            font-family: "Courier New", Courier, monospace;
-            font-size: 14px;
-            line-height: 1.4;
-            color: #000;
-            background: #fff;
-            padding: 8px;
         }
         {% else %}
         #page {
@@ -438,24 +440,6 @@
 </div>
 
 </div><!-- /#page -->
-
-{% if rotate %}
-<script>
-/* Position the rotated #page container using actual screen dimensions.
-   After a 90° CW rotation with transform-origin:top-left the element's
-   visual top-left corner moves to where its bottom-left was, so we push
-   it right by the viewport height (= the visual width after rotation).
-   Width ↔ Height are swapped so layout reflows to landscape. */
-(function () {
-    var p = document.getElementById("page");
-    var W = document.documentElement.clientWidth  || window.innerWidth;
-    var H = document.documentElement.clientHeight || window.innerHeight;
-    p.style.width  = H + "px";   /* landscape width  = portrait height */
-    p.style.height = W + "px";   /* landscape height = portrait width  */
-    p.style.left   = W + "px";   /* shift right so content is visible  */
-})();
-</script>
-{% endif %}
 
 </body>
 </html>
