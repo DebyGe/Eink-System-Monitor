@@ -26,6 +26,11 @@ except (ImportError, Exception):
 app = Flask(__name__)
 
 # ---------------------------------------------------------------------------
+# Display settings
+# ---------------------------------------------------------------------------
+ROTATE_DISPLAY = False  # Set to True to rotate the page 90° (landscape → portrait)
+
+# ---------------------------------------------------------------------------
 # Data collection helpers
 # ---------------------------------------------------------------------------
 
@@ -147,7 +152,7 @@ def collect_all() -> dict:
 def index():
     """Render the e-ink optimized dashboard."""
     data = collect_all()
-    return render_template("index.html", data=data)
+    return render_template("index.html", data=data, rotate=ROTATE_DISPLAY)
 
 
 @app.route("/api/stats")

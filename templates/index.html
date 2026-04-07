@@ -15,6 +15,38 @@
             box-sizing: border-box;
         }
 
+        {% if rotate %}
+        /* ---------- Rotated display (90° CW, portrait → landscape) ---------- */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #page {
+            transform: rotate(90deg);
+            transform-origin: top left;
+            position: absolute;
+            top: 0;
+            left: 0;
+            /* width/height swapped and repositioned by inline script */
+            overflow-y: auto;
+            overflow-x: hidden;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 14px;
+            line-height: 1.4;
+            color: #000;
+            background: #fff;
+            padding: 8px;
+        }
+        {% else %}
+        #page {
+            /* No rotation – normal flow */
+        }
+        {% endif %}
+
         body {
             font-family: "Courier New", Courier, monospace;
             font-size: 14px;
@@ -136,6 +168,50 @@
             background: #000;
         }
 
+        /* ---------- Summary bar table ---------- */
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .summary-table th {
+            background: #000;
+            color: #fff;
+            font-weight: bold;
+            padding: 3px 6px;
+            text-align: center;
+            border: 1px solid #000;
+            width: 25%;
+        }
+
+        .summary-table td {
+            border: 1px solid #000;
+            padding: 4px 6px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .summary-bar {
+            display: block;
+            height: 12px;
+            border: 1px solid #000;
+            background: #fff;
+            margin: 2px auto 0;
+        }
+
+        .summary-fill {
+            display: block;
+            height: 100%;
+            background: #000;
+        }
+
+        .summary-detail {
+            font-size: 10px;
+            color: #555;
+        }
+
         /* ---------- Footer ---------- */
         .footer {
             text-align: center;
@@ -166,6 +242,8 @@
 </head>
 <body>
 
+<div id="page">
+
 <h1>SYSTEM MONITOR</h1>
 
 <div class="meta">
@@ -173,6 +251,56 @@
     {{ data.system.os }} ({{ data.system.architecture }}) &bull;
     {{ data.timestamp }}
 </div>
+
+<!-- ==================== SUMMARY BAR TABLE ==================== -->
+<table class="summary-table">
+    <tr>
+        <th>CPU</th>
+        <th>GPU</th>
+        <th>RAM</th>
+        <th>VRAM</th>
+    </tr>
+    <tr>
+        <!-- CPU -->
+        <td>
+            <strong>{{ data.cpu.usage_percent }}%</strong>
+            <span class="summary-bar"><span class="summary-fill" style="width:{{ data.cpu.usage_percent }}%"></span></span>
+            {% if data.cpu.freq_current_mhz %}
+            <div class="summary-detail">{{ data.cpu.freq_current_mhz }} MHz</div>
+            {% endif %}
+        </td>
+        <!-- GPU -->
+        <td>
+            {% if data.gpus %}
+            <strong>{{ data.gpus[0].load_percent }}%</strong>
+            <span class="summary-bar"><span class="summary-fill" style="width:{{ data.gpus[0].load_percent }}%"></span></span>
+            {% if data.gpus[0].temperature_c %}
+            <div class="summary-detail">{{ data.gpus[0].temperature_c }} &deg;C</div>
+            {% endif %}
+            {% else %}
+            <strong>N/A</strong>
+            <span class="summary-bar"><span class="summary-fill" style="width:0%"></span></span>
+            {% endif %}
+        </td>
+        <!-- RAM -->
+        <td>
+            <strong>{{ data.memory.ram_percent }}%</strong>
+            <span class="summary-bar"><span class="summary-fill" style="width:{{ data.memory.ram_percent }}%"></span></span>
+            <div class="summary-detail">{{ data.memory.ram_used_gb }}/{{ data.memory.ram_total_gb }} GB</div>
+        </td>
+        <!-- VRAM -->
+        <td>
+            {% if data.gpus %}
+            <strong>{{ data.gpus[0].memory_percent }}%</strong>
+            <span class="summary-bar"><span class="summary-fill" style="width:{{ data.gpus[0].memory_percent }}%"></span></span>
+            <div class="summary-detail">{{ data.gpus[0].memory_used_mb }}/{{ data.gpus[0].memory_total_mb }} MB</div>
+            {% else %}
+            <strong>N/A</strong>
+            <span class="summary-bar"><span class="summary-fill" style="width:0%"></span></span>
+            {% endif %}
+        </td>
+    </tr>
+</table>
 
 <!-- ==================== SYSTEM ==================== -->
 <div class="section">
@@ -308,6 +436,26 @@
 <div class="footer">
     Auto-refresh every 30 seconds &bull; {{ data.timestamp }}
 </div>
+
+</div><!-- /#page -->
+
+{% if rotate %}
+<script>
+/* Position the rotated #page container using actual screen dimensions.
+   After a 90° CW rotation with transform-origin:top-left the element's
+   visual top-left corner moves to where its bottom-left was, so we push
+   it right by the viewport height (= the visual width after rotation).
+   Width ↔ Height are swapped so layout reflows to landscape. */
+(function () {
+    var p = document.getElementById("page");
+    var W = document.documentElement.clientWidth  || window.innerWidth;
+    var H = document.documentElement.clientHeight || window.innerHeight;
+    p.style.width  = H + "px";   /* landscape width  = portrait height */
+    p.style.height = W + "px";   /* landscape height = portrait width  */
+    p.style.left   = W + "px";   /* shift right so content is visible  */
+})();
+</script>
+{% endif %}
 
 </body>
 </html>
